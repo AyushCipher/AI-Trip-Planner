@@ -1,118 +1,171 @@
-# AI Trip Planner
+# ✈ AI Trip Planner
 
-A React app that takes free-form text describing a trip, sends it to Google Gemini, and renders the response as an interactive, structured day-by-day itinerary — not a chatbot.
+A modern, full-stack React 19 application that transforms natural-language travel requests into structured, interactive day-by-day itineraries powered by **Google Gemini AI**, **Redux Toolkit**, and **Tailwind CSS v4**.
 
-## Quick Start
+Instead of returning unstructured text or basic chat responses, the app utilizes Gemini's structured JSON output mode to render an interactive itinerary complete with drag-and-drop stop reordering, day expansion controls, single-stop deletions, and defensive error recovery.
+
+---
+
+## 🚀 Quick Start
+
+### 1. Prerequisites
+- **Node.js**: v18.0.0 or higher
+- **npm**: v9.0.0 or higher
+
+### 2. Setup & Installation
 
 ```bash
-# 1. Clone the repo
-git clone <repo-url> && cd ai-trip-planner
+# Clone the repository
+git clone <repository-url>
+cd ai-trip-planner
 
-# 2. Copy environment template and add your Gemini API key
+# Copy environment file and configure your API key
 cp .env.example .env
-# Edit .env and set GEMINI_API_KEY=your_key_here
+```
 
-# 3. Install dependencies (root + server)
-npm install && cd server && npm install && cd ..
+Edit `.env` to include your Google Gemini API key:
+```env
+GEMINI_API_KEY=your_gemini_api_key_here
+```
 
-# 4. Start both frontend and backend
+### 3. Install & Start
+
+Dependencies for both the React frontend and Express backend proxy are automatically configured via npm's `postinstall` hook.
+
+```bash
+# Install dependencies for client & server
+npm install
+
+# Start both backend proxy (port 3001) & Vite dev server (port 5173)
 npm start
 ```
 
-This runs:
-- **Frontend** (Vite): http://localhost:5173
-- **Backend** (Express proxy): http://localhost:3001
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-## Architecture
+---
+
+## 🏗 Architecture & Design Principles
 
 ```
-Frontend (React + Redux Toolkit)
-    ↓ POST /api/generate { prompt }
-Express Backend Proxy (server/index.js)
-    ↓ Gemini API (gemini-3.6-flash, responseMimeType: "application/json")
-    ↓ Returns raw JSON text
-Frontend validates & renders interactive itinerary
+┌────────────────────────────────┐         ┌───────────────────────────────┐         ┌──────────────────────────────┐
+│  React 19 + Redux Toolkit UI   │ ──────> │   Express API Proxy (Port 3001)│ ──────> │   Google Gemini 3.6 Flash    │
+│  (Port 5173 / Vite Dev Server) │ <────── │   (Hides API Key from Browser) │ <────── │ (Structured JSON Schema)     │
+└────────────────────────────────┘         └───────────────────────────────┘         └──────────────────────────────┘
 ```
 
-**Why a backend proxy?** The Gemini API key never touches the browser. The Express server is the only thing that holds the key.
+### Key Architectural Decisions
+- **Secure Backend Proxy**: Hides `GEMINI_API_KEY` from client bundles while managing rate limiting and request timeouts.
+- **Server & Client AbortControllers**: Enforces a 15-second timeout budget to prevent hung upstream connections.
+- **Stale Response Protection**: Redux thunk tracks request IDs (`requestId`) to guarantee out-of-order API responses never overwrite current UI state.
+- **Resilient JSON Validation**: Frontend and backend validators strip markdown code fences (` ```json `) and validate required schema fields (`days`, `dayNumber`, `stops`, etc.) before rendering.
 
-## Features
+---
 
-- **Free-form text input** — describe any trip in natural language
-- **Structured AI output** — Gemini returns JSON via `responseMimeType: "application/json"` with a defined schema
-- **Interactive itinerary** — expand/collapse days, remove stops, drag-to-reorder stops within a day
-- **Robust error handling** — see section below
+## ✨ Core Features
 
-## Error Handling (20% of grade)
+- **Natural Language Trip Planner**: Converts prompts like *"5 days in Tokyo focusing on street food, tech, and ancient temples"* into complete travel plans.
+- **Interactive Day & Stop View**: Includes expandable day cards, detailed stop timing, cost estimates, descriptions, and tips.
+- **Drag-and-Drop Reordering**: Smooth activity reordering within days using `@dnd-kit/core` and `@dnd-kit/sortable`.
+- **Customization & Edits**: Delete unwanted stops dynamically with instant state recalculation.
+- **Tailwind CSS v4 Styling**: Built with Tailwind CSS v4 featuring custom `@theme` variables (`paper`, `ink`, `sand`, `terracotta`, `pine`), Google Fonts (`DM Sans`, `Fraunces`), warm neutral colors, responsive grid layouts, and custom interactive states.
 
-This is the core of the submission. Every failure mode is handled:
+---
 
-| Failure Mode | How It's Handled |
-|---|---|
-| **Malformed JSON** from Gemini | `validateItinerary()` tries direct parse, then strips markdown fences and re-parses. Shows ErrorState with retry — never crashes. |
-| **Wrong-shape JSON** (`{ foo: "bar" }`) | Shape validation checks for `days` array, required fields. Returns `{ valid: false, errors }` — no garbage renders. |
-| **Empty response** | Detected and surfaced as a specific error message with retry. |
-| **Slow/hung response** | 15s timeout via `AbortController` on both client and server. Timeout error shown with retry button. |
-| **Two rapid submissions (stale response)** | Each request gets a `crypto.randomUUID()` requestId. Redux only applies a response if its `requestId` matches the latest. Older responses are silently discarded. |
-| **Network failure** | Fetch errors caught, offline-aware message shown. |
-| **Render crash** | Components handle missing/null data defensively. |
+## 🛡 Robust Error Handling
 
-### Testing failure modes
+The application provides multi-layered error handling across client and server:
 
-The backend supports `MOCK_MODE` for deterministic testing:
+| Failure Scenario | Detection / Resolution | User Experience |
+|---|---|---|
+| **Malformed JSON from AI** | `validateItinerary` sanitizes fences and validates object structure | Gracefully falls back to error state with clean feedback |
+| **Missing Required Fields** | Schema checker enforces mandatory trip properties (`days`, `stops`, `title`) | Displays error details with prompt suggestions |
+| **Timeout (>15 seconds)** | Dual client & server `AbortController` timeouts | Shows "Request timed out" with a 1-click **Retry** button |
+| **Rapid Submissions** | Stale request tracking matches `requestId` on Redux store | Stale API responses are safely ignored |
+| **Offline Network Loss** | Client detects `navigator.onLine === false` | Prompts user with an offline connectivity warning |
+| **Rate Limit / API Error** | Express proxy maps status codes (e.g., 429, 400 safety blocks) | Displays user-friendly guidance to rephrase or wait |
+
+---
+
+## 🧪 Testing & Failure Simulation
+
+### Unit Tests
+Built with **Vitest** for state management, JSON validation, fence stripping, and stale request cancellation:
 
 ```bash
-# In .env:
-MOCK_MODE=malformed    # Returns invalid JSON
-MOCK_MODE=empty        # Returns empty string
-MOCK_MODE=slow         # Delays 20s (triggers timeout)
-MOCK_MODE=partial      # Returns valid JSON missing "days"
+# Run unit test suite
+npm test
+
+# Run tests in watch mode
+npm run test:watch
 ```
 
-### Unit tests
+### Failure Mode Simulation (`MOCK_MODE`)
+Test UI error states without burning API quota by configuring `MOCK_MODE` in `.env`:
 
-```bash
-npm test                # Run all tests (8 tests for validateItinerary)
-npm run test:watch      # Watch mode
+```env
+# Options: malformed | empty | slow | partial | off
+MOCK_MODE=malformed
 ```
 
-Tests cover: valid input, malformed JSON, wrong shape, empty days, markdown fences, null input, empty string, backend error detection.
+- `malformed`: Returns unparseable JSON text.
+- `empty`: Simulates blank upstream AI response.
+- `slow`: Delays response for 20s to trigger client timeout handler.
+- `partial`: Returns valid JSON missing required trip schema elements.
 
-## State Management
+---
 
-Redux Toolkit with a single `itinerarySlice`:
-- `status`: `'idle' | 'loading' | 'success' | 'error'`
-- `data`: parsed itinerary (null when not success)
-- `errorMessage`: error string (null when not error)
-- `requestId`: stale-response guard — set before thunk dispatch, checked on fulfillment
-- `lastPrompt`: for retry functionality
+## 🔄 State Management (Redux Toolkit)
 
-## AI Usage Note
+Global state is centralized in `itinerarySlice`:
 
-*[To be filled in by the author]*
+```javascript
+{
+  status: 'idle' | 'loading' | 'success' | 'error',
+  data: {
+    tripTitle: string,
+    destination: string,
+    duration: string,
+    travelers: number,
+    estimatedBudget: string,
+    days: [
+      {
+        id: string,
+        dayNumber: number,
+        title: string,
+        stops: [
+          { id: string, name: string, time: string, description: string, cost: string, tips: string }
+        ]
+      }
+    ]
+  },
+  errorMessage: string | null,
+  requestId: string | null,
+  lastPrompt: string | null
+}
+```
 
-## Known Limitations
+---
 
-- **No refinement loop** — each submission generates a fresh itinerary (no follow-up editing of existing results)
-- **No persistence** — refreshing the page loses the current itinerary (no localStorage save/load)
-- **No dark mode toggle** — uses a fixed dark theme
-- **No day-level reordering** — only stop-level drag-and-drop within a day
-- **No streaming** — waits for the full response before rendering
-- **Client-side timeout is a hard 15s** — complex prompts on slow networks may time out
-- **Single API key** — no user authentication or per-user rate limiting
-
-## Time Spent
-
-*[To be filled in by the author]*
-
-## Tech Stack
+## 🛠 Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| Frontend | React 18, Vite |
-| State | Redux Toolkit (createSlice, configureStore, createAsyncThunk) |
-| Backend | Express.js (API proxy) |
-| AI | Google Gemini 3.6 Flash |
-| Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
-| Styling | Vanilla CSS with CSS custom properties |
+|---|---|
+| **Frontend Framework** | React 19, Vite |
+| **Styling** | Tailwind CSS v4 (`@tailwindcss/vite`), Custom `@theme` tokens |
+| **State Management** | Redux Toolkit (`@reduxjs/toolkit`, `react-redux`) |
+| **Drag & Drop** | `@dnd-kit/core`, `@dnd-kit/sortable` |
+| **Backend Proxy** | Express.js (Node 18+ ES Modules) |
+| **AI Integration** | Google Gemini API (Structured JSON Schema) |
+| **Testing** | Vitest |
+
+---
+
+## 📋 Available Scripts
+
+- `npm start` - Launches both backend server and Vite client concurrently.
+- `npm run dev` - Starts Vite frontend only.
+- `npm run dev:server` - Starts Express proxy server only.
+- `npm run build` - Builds production frontend assets.
+- `npm test` - Runs Vitest unit tests.
+h CSS custom properties |
 | Testing | Vitest |
