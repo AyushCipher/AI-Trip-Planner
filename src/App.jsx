@@ -11,7 +11,6 @@ import LoadingState from './components/LoadingState.jsx';
 import ErrorState from './components/ErrorState.jsx';
 import EmptyState from './components/EmptyState.jsx';
 
-import './App.css';
 
 function App() {
   const dispatch = useDispatch();
@@ -19,18 +18,12 @@ function App() {
     (state) => state.itinerary
   );
 
-  // Track the input value so example chips can pre-fill it
   const [inputValue, setInputValue] = useState('');
 
-  // ── Submit handler ──
   const handleSubmit = useCallback(
     (prompt) => {
-      // Generate a unique requestId for this submission
       const requestId = crypto.randomUUID();
 
-      // Set it in Redux BEFORE dispatching the thunk — this is the
-      // stale-response guard: any older in-flight request will see
-      // its requestId doesn't match and its result will be discarded.
       dispatch(setRequestId(requestId));
       dispatch(generateItinerary({ prompt, requestId }));
     },
@@ -66,16 +59,16 @@ function App() {
   };
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1 className="app-header__title">✈ AI Trip Planner</h1>
-        <p className="app-header__subtitle">
+    <div className="min-h-screen bg-paper">
+      <header className="px-5 pt-10 pb-7 text-center sm:px-8 sm:pt-14">
+        <h1 className="font-display text-3xl font-semibold tracking-tight text-ink sm:text-4xl">✈ AI Trip Planner</h1>
+        <p className="mt-2 text-sm leading-6 text-ink/65 sm:text-base">
           Describe your dream trip and let AI create the perfect itinerary
         </p>
       </header>
 
-      <main className="app-main">
-        <section className="app-input-section">
+      <main className="mx-auto w-full max-w-5xl px-4 pb-14 sm:px-6">
+        <section className="mb-8">
           <TripInput
             onSubmit={handleSubmit}
             isLoading={status === 'loading'}
@@ -83,7 +76,7 @@ function App() {
           />
         </section>
 
-        <section className="app-results-section" aria-live="polite">
+        <section className="min-h-50" aria-live="polite">
           {renderResults()}
         </section>
       </main>

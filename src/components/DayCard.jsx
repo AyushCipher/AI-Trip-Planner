@@ -17,7 +17,6 @@ import { CSS } from '@dnd-kit/utilities';
 import { useDispatch } from 'react-redux';
 import { reorderStops } from '../store/itinerarySlice.js';
 import StopCard from './StopCard.jsx';
-import './DayCard.css';
 
 // ── Sortable wrapper for each StopCard ──
 function SortableStop({ stop, onRemove }) {
@@ -85,9 +84,9 @@ export default function DayCard({ day, onRemoveStop }) {
   const stopIds = day.stops ? day.stops.map((s) => s.id) : [];
 
   return (
-    <div className="day-card">
+    <div className="mb-6 overflow-hidden rounded-2xl border border-ink/10 bg-white shadow-sm">
       <div
-        className="day-card__header"
+        className="flex cursor-pointer select-none items-center justify-between gap-4 bg-sand/50 px-4 py-3 transition hover:bg-sand sm:px-6 sm:py-4"
         onClick={toggleExpand}
         role="button"
         tabIndex={0}
@@ -99,17 +98,17 @@ export default function DayCard({ day, onRemoveStop }) {
           }
         }}
       >
-        <div className="day-card__header-left">
-          <div className="day-card__number">{day.dayNumber}</div>
-          <h2 className="day-card__title">{day.title}</h2>
+        <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+          <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-pine text-sm font-bold text-white">{day.dayNumber}</div>
+          <h2 className="font-display truncate text-lg font-semibold text-ink sm:text-xl">{day.title}</h2>
         </div>
-        <div className="day-card__header-right">
-          <span className="day-card__stop-count">
+        <div className="flex shrink-0 items-center gap-3 sm:gap-4">
+          <span className="text-sm text-ink/60">
             {day.stops?.length || 0} stops
           </span>
           <span
-            className={`day-card__chevron ${
-              expanded ? 'day-card__chevron--expanded' : ''
+            className={`text-xs text-ink/60 transition-transform ${
+              expanded ? 'rotate-180' : ''
             }`}
           >
             ▼
@@ -118,14 +117,14 @@ export default function DayCard({ day, onRemoveStop }) {
       </div>
 
       <div
-        className={`day-card__content-wrapper ${
-          expanded ? 'day-card__content-wrapper--expanded' : ''
+        className={`grid transition-[grid-template-rows] duration-300 ${
+          expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
         }`}
       >
-        <div className="day-card__content">
-          <div className="stops-list" data-day-id={day.id}>
+        <div className="overflow-hidden">
+          <div className="bg-paper/60 px-4 py-4 sm:px-6 sm:pb-6" data-day-id={day.id}>
             {!day.stops || day.stops.length === 0 ? (
-              <p className="day-card__empty-msg">
+              <p className="rounded-xl border border-dashed border-ink/20 bg-white px-4 py-6 text-center text-sm italic text-ink/60">
                 No stops planned for this day.
               </p>
             ) : (
