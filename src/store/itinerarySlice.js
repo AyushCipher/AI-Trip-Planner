@@ -107,9 +107,10 @@ const itinerarySlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      .addCase(generateItinerary.pending, (state) => {
+      .addCase(generateItinerary.pending, (state, action) => {
         state.status = 'loading';
         state.errorMessage = null;
+        state.lastPrompt = action.meta.arg.prompt;
       })
       .addCase(generateItinerary.fulfilled, (state, action) => {
         const { validation, requestId, prompt } = action.payload;
@@ -136,8 +137,15 @@ const itinerarySlice = createSlice({
         }
       })
       .addCase(generateItinerary.rejected, (state, action) => {
-        // Also guard against stale rejections
-        // (Though less critical — if the latest request failed, we show that error)
+        // ── STALE REJECTION GUARD ──
+        // RTK stores the original thunk arg in action.meta.arg.
+        // If this rejection's requestId doesn't match the latest,
+        // it's from an older request — discard it silently.
+        const requestId = action.meta?.arg?.requestId;
+        if (requestId && requestId !== state.requestId) {
+          return;
+        }
+
         state.status = 'error';
         state.data = null;
         state.errorMessage =
