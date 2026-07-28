@@ -29,7 +29,7 @@ This runs:
 Frontend (React + Redux Toolkit)
     ↓ POST /api/generate { prompt }
 Express Backend Proxy (server/index.js)
-    ↓ Gemini API (gemini-2.0-flash, responseMimeType: "application/json")
+    ↓ Gemini API (gemini-3.6-flash, responseMimeType: "application/json")
     ↓ Returns raw JSON text
 Frontend validates & renders interactive itinerary
 ```
@@ -112,7 +112,7 @@ Redux Toolkit with a single `itinerarySlice`:
 | Frontend | React 18, Vite |
 | State | Redux Toolkit (createSlice, configureStore, createAsyncThunk) |
 | Backend | Express.js (API proxy) |
-| AI | Google Gemini 2.0 Flash |
+| AI | Google Gemini 3.6 Flash |
 | Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
 | Styling | Vanilla CSS with CSS custom properties |
 | Testing | Vitest |

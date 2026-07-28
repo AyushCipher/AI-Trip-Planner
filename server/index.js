@@ -11,7 +11,7 @@ app.use(express.json());
 // Gemini API configuration
 // ──────────────────────────────────────────────
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash';
+const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 const TIMEOUT_MS = 15_000;
 
@@ -115,7 +115,7 @@ const MOCK_RESPONSES = {
 // ──────────────────────────────────────────────
 // POST /api/generate
 // ──────────────────────────────────────────────
-app.post('/api/generate', async (req, res) => {
+app.post('/api/generate', async (req, res, next) => {
   const { prompt } = req.body;
 
   if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
@@ -153,6 +153,7 @@ app.post('/api/generate', async (req, res) => {
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
+    console.log(`Sending Gemini request with model: ${GEMINI_MODEL}`);
     const geminiResponse = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -177,11 +178,50 @@ app.post('/api/generate', async (req, res) => {
 
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text().catch(() => 'Unknown error');
-      console.error(`Gemini API error (${geminiResponse.status}):`, errorText);
-      return res.status(geminiResponse.status).json({
+      let errorBody;
+      try {
+        errorBody = JSON.parse(errorText);
+      } catch {
+        errorBody = null;
+      }
+
+      console.error('Gemini API request failed', {
+        httpStatus: geminiResponse.status,
+        errorStatus: errorBody?.error?.status ?? null,
+        errorMessage: errorBody?.error?.message ?? errorText,
+        responseBody: errorText,
+      });
+      const errorMessage = errorBody?.error?.message?.toLowerCase() ?? '';
+      const isSafetyBlock = /safety|blocked|refus/.test(errorMessage);
+
+      if (geminiResponse.status === 429) {
+        return res.status(429).json({
+          error: true,
+          reason: 'rate_limit',
+          message: 'Too many requests — please try again in a moment.',
+        });
+      }
+
+      if (geminiResponse.status === 401 || geminiResponse.status === 403) {
+        return res.status(500).json({
+          error: true,
+          reason: 'server_configuration',
+          message: 'Server configuration error — please try again later.',
+        });
+      }
+
+      if (isSafetyBlock) {
+        return res.status(400).json({
+          error: true,
+          reason: 'content_safety',
+          message: "Couldn't generate a response for that request — try rephrasing.",
+        });
+      }
+
+      return res.status(502).json({
         error: true,
-        reason: geminiResponse.status === 429 ? 'rate_limit' : 'api_error',
-        message: `Gemini API returned ${geminiResponse.status}: ${errorText.slice(0, 200)}`,
+        reason: 'provider_error',
+        message: 'The itinerary service is temporarily unavailable. Please try again later.',
       });
     }
 
@@ -205,7 +245,6 @@ app.post('/api/generate', async (req, res) => {
     clearTimeout(timeout);
 
     if (err.name === 'AbortError') {
-      console.error('Gemini request timed out after', TIMEOUT_MS, 'ms');
       return res.status(504).json({
         error: true,
         reason: 'timeout',
@@ -213,13 +252,23 @@ app.post('/api/generate', async (req, res) => {
       });
     }
 
-    console.error('Fetch error:', err.message);
-    return res.status(500).json({
-      error: true,
-      reason: 'api_error',
-      message: `Failed to reach Gemini API: ${err.message}`,
-    });
+    return next(err);
   }
+});
+
+// Final safety net: always keep unexpected server failures in JSON form.
+app.use((err, req, res, next) => {
+  console.error('Unhandled server error:', err);
+
+  if (res.headersSent) {
+    return next(err);
+  }
+
+  return res.status(500).json({
+    error: true,
+    reason: 'server_error',
+    message: 'Something went wrong on the server. Please try again later.',
+  });
 });
 
 // ──────────────────────────────────────────────
@@ -227,6 +276,11 @@ app.post('/api/generate', async (req, res) => {
 // ──────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  console.log(
+    `Gemini configuration: model=${GEMINI_MODEL}, API key prefix=${
+      GEMINI_API_KEY ? `${GEMINI_API_KEY.slice(0, 8)}...` : '[not set]'
+    }`
+  );
   if (process.env.MOCK_MODE && process.env.MOCK_MODE !== 'off') {
     console.log(`⚠️  MOCK_MODE is active: ${process.env.MOCK_MODE}`);
   }
