@@ -8,7 +8,7 @@ export const generateItinerary = createAsyncThunk(
 
     signal.addEventListener('abort', () => controller.abort());
 
-    const timeout = setTimeout(() => controller.abort(), 15_000);
+    const timeout = setTimeout(() => controller.abort(), 45_000);
 
     try {
       const response = await fetch('/api/generate', {

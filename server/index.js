@@ -12,7 +12,7 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 45_000;
 
 const SYSTEM_PROMPT = `You are a travel planning assistant. Given a trip description, return a structured JSON itinerary.
 
