@@ -30,19 +30,16 @@ function App() {
     [dispatch]
   );
 
-  // ── Example chip click handler ──
   const handleExampleClick = useCallback((text) => {
     setInputValue(text);
   }, []);
 
-  // ── Retry handler ──
   const handleRetry = useCallback(() => {
     if (lastPrompt) {
       handleSubmit(lastPrompt);
     }
   }, [lastPrompt, handleSubmit]);
 
-  // ── Render the correct results section ──
   const renderResults = () => {
     switch (status) {
       case 'idle':

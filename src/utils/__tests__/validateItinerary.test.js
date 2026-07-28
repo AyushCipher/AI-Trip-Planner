@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import validateItinerary from '../validateItinerary.js';
 
-// ─── Fixture: a valid complete itinerary ───
 const VALID_ITINERARY = {
   tripTitle: '3 Days in Tokyo',
   destination: 'Tokyo, Japan',
@@ -52,7 +51,6 @@ const VALID_ITINERARY = {
 };
 
 describe('validateItinerary', () => {
-  // ─── Test 1: Valid complete itinerary ───
   it('accepts a valid complete itinerary', () => {
     const result = validateItinerary(JSON.stringify(VALID_ITINERARY));
 
@@ -62,12 +60,10 @@ describe('validateItinerary', () => {
     expect(result.data.destination).toBe('Tokyo, Japan');
     expect(result.data.days).toHaveLength(2);
     expect(result.data.days[0].stops).toHaveLength(2);
-    // Check that IDs were added
     expect(result.data.days[0].id).toBeDefined();
     expect(result.data.days[0].stops[0].id).toBeDefined();
   });
 
-  // ─── Test 2: Malformed JSON string ───
   it('rejects a malformed JSON string without crashing', () => {
     const result = validateItinerary('{ this is not valid json!!!');
 
@@ -77,18 +73,15 @@ describe('validateItinerary', () => {
     expect(result.errors[0]).toMatch(/parse/i);
   });
 
-  // ─── Test 3: Wrong shape ({ foo: "bar" }) ───
   it('rejects valid JSON with wrong shape', () => {
     const result = validateItinerary(JSON.stringify({ foo: 'bar' }));
 
     expect(result.valid).toBe(false);
     expect(result.data).toBeNull();
     expect(result.errors.length).toBeGreaterThan(0);
-    // Should complain about missing "days"
     expect(result.errors.some((e) => e.toLowerCase().includes('days'))).toBe(true);
   });
 
-  // ─── Test 4: Empty days array ───
   it('rejects an itinerary with empty days array', () => {
     const result = validateItinerary(
       JSON.stringify({ destination: 'Tokyo', days: [] })
@@ -99,7 +92,6 @@ describe('validateItinerary', () => {
     expect(result.errors.some((e) => e.toLowerCase().includes('no days'))).toBe(true);
   });
 
-  // ─── Test 5: JSON wrapped in markdown code fences ───
   it('parses JSON wrapped in markdown code fences', () => {
     const fenced = '```json\n' + JSON.stringify(VALID_ITINERARY) + '\n```';
     const result = validateItinerary(fenced);
@@ -110,7 +102,6 @@ describe('validateItinerary', () => {
     expect(result.data.days).toHaveLength(2);
   });
 
-  // ─── Additional edge cases ───
   it('handles null input without crashing', () => {
     const result = validateItinerary(null);
 

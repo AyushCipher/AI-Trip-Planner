@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 const app = express();
 const PORT = 3001;
@@ -7,17 +9,11 @@ const PORT = 3001;
 app.use(cors());
 app.use(express.json());
 
-// ──────────────────────────────────────────────
-// Gemini API configuration
-// ──────────────────────────────────────────────
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
 const TIMEOUT_MS = 15_000;
 
-// ──────────────────────────────────────────────
-// System prompt that enforces structured JSON output
-// ──────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are a travel planning assistant. Given a trip description, return a structured JSON itinerary.
 
 You MUST respond with valid JSON matching this exact schema — no markdown, no explanation, just the JSON object:
@@ -54,9 +50,6 @@ Rules:
 - If the user doesn't specify number of travelers, default to 2
 - If the user doesn't specify budget, estimate a moderate one`;
 
-// ──────────────────────────────────────────────
-// Gemini response schema for structured output
-// ──────────────────────────────────────────────
 const RESPONSE_SCHEMA = {
   type: 'object',
   properties: {
@@ -96,9 +89,6 @@ const RESPONSE_SCHEMA = {
   required: ['tripTitle', 'destination', 'days'],
 };
 
-// ──────────────────────────────────────────────
-// Mock responses for testing failure modes
-// ──────────────────────────────────────────────
 const MOCK_RESPONSES = {
   malformed: () => ({ status: 200, body: '{ this is not valid json at all!!!' }),
   empty: () => ({ status: 200, body: '' }),
@@ -112,9 +102,6 @@ const MOCK_RESPONSES = {
     ),
 };
 
-// ──────────────────────────────────────────────
-// POST /api/generate
-// ──────────────────────────────────────────────
 app.post('/api/generate', async (req, res, next) => {
   const { prompt } = req.body;
 
@@ -126,7 +113,6 @@ app.post('/api/generate', async (req, res, next) => {
     });
   }
 
-  // ── Mock mode for testing failure scenarios ──
   const mockMode = process.env.MOCK_MODE?.toLowerCase();
   if (mockMode && mockMode !== 'off' && MOCK_RESPONSES[mockMode]) {
     console.log(`[MOCK_MODE=${mockMode}] Returning mock response`);
@@ -138,7 +124,6 @@ app.post('/api/generate', async (req, res, next) => {
     }
   }
 
-  // ── Validate API key ──
   if (!GEMINI_API_KEY) {
     console.error('GEMINI_API_KEY is not set in environment');
     return res.status(500).json({
@@ -148,7 +133,6 @@ app.post('/api/generate', async (req, res, next) => {
     });
   }
 
-  // ── Call Gemini with timeout ──
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
@@ -227,7 +211,6 @@ app.post('/api/generate', async (req, res, next) => {
 
     const data = await geminiResponse.json();
 
-    // Extract the text content from Gemini's response envelope
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 
@@ -239,7 +222,6 @@ app.post('/api/generate', async (req, res, next) => {
       });
     }
 
-    // Return the raw text — the frontend's validateItinerary handles parsing
     res.status(200).send(text);
   } catch (err) {
     clearTimeout(timeout);
@@ -256,7 +238,6 @@ app.post('/api/generate', async (req, res, next) => {
   }
 });
 
-// Final safety net: always keep unexpected server failures in JSON form.
 app.use((err, req, res, next) => {
   console.error('Unhandled server error:', err);
 
@@ -271,25 +252,17 @@ app.use((err, req, res, next) => {
   });
 });
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Serve static assets from Vite build in production
 app.use(express.static(path.join(__dirname, '../dist')));
 
-// Fallback all non-API GET requests to index.html for client-side routing
 app.get('/*splat', (req, res) => {
   if (!req.path.startsWith('/api')) {
     res.sendFile(path.join(__dirname, '../dist/index.html'));
   }
 });
 
-// ──────────────────────────────────────────────
-// Start server
-// ──────────────────────────────────────────────
 const serverPort = process.env.PORT || PORT;
 
 app.listen(serverPort, () => {

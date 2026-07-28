@@ -1,24 +1,13 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import validateItinerary from '../utils/validateItinerary.js';
 
-// ──────────────────────────────────────────────
-// Async thunk: generateItinerary
-// ──────────────────────────────────────────────
-// Each call generates a unique requestId. The fulfilled/rejected reducers
-// ONLY apply the result if requestId matches the latest one in state.
-// This is the stale-response guard: if the user fires two rapid requests,
-// only the latest one ever reaches state.
-// ──────────────────────────────────────────────
-
 export const generateItinerary = createAsyncThunk(
   'itinerary/generate',
   async ({ prompt, requestId }, { signal }) => {
     const controller = new AbortController();
 
-    // If the thunk is aborted by Redux (e.g. on unmount), also abort the fetch
     signal.addEventListener('abort', () => controller.abort());
 
-    // 15-second client-side timeout (in addition to server's 15s timeout)
     const timeout = setTimeout(() => controller.abort(), 15_000);
 
     try {
@@ -33,8 +22,6 @@ export const generateItinerary = createAsyncThunk(
 
       const text = await response.text();
 
-      // The validation function handles everything: parsing, shape checking,
-      // fence stripping, error detection. It never throws.
       const validation = validateItinerary(text);
 
       return { validation, requestId, prompt };
@@ -54,26 +41,20 @@ export const generateItinerary = createAsyncThunk(
   }
 );
 
-// ──────────────────────────────────────────────
-// Slice
-// ──────────────────────────────────────────────
 const itinerarySlice = createSlice({
   name: 'itinerary',
   initialState: {
-    status: 'idle', // 'idle' | 'loading' | 'success' | 'error'
+    status: 'idle',
     data: null,
     errorMessage: null,
-    requestId: null, // latest requestId — stale-response guard
-    lastPrompt: null, // for retry functionality
+    requestId: null,
+    lastPrompt: null,
   },
   reducers: {
-    // Set a new requestId when a generation starts — this is called
-    // BEFORE the thunk dispatches so we can track which request is "current"
     setRequestId(state, action) {
       state.requestId = action.payload;
     },
 
-    // Remove a stop from a day
     removeStop(state, action) {
       const { dayId, stopId } = action.payload;
       if (!state.data?.days) return;
@@ -84,7 +65,6 @@ const itinerarySlice = createSlice({
       }
     },
 
-    // Reorder stops within a day (after drag-and-drop)
     reorderStops(state, action) {
       const { dayId, oldIndex, newIndex } = action.payload;
       if (!state.data?.days) return;
@@ -96,7 +76,6 @@ const itinerarySlice = createSlice({
       }
     },
 
-    // Clear the itinerary (reset to idle)
     clearItinerary(state) {
       state.status = 'idle';
       state.data = null;
@@ -115,9 +94,6 @@ const itinerarySlice = createSlice({
       .addCase(generateItinerary.fulfilled, (state, action) => {
         const { validation, requestId, prompt } = action.payload;
 
-        // ── STALE RESPONSE GUARD ──
-        // If this response's requestId doesn't match the latest one,
-        // it's from an older request — discard it silently.
         if (requestId !== state.requestId) {
           return;
         }
@@ -137,10 +113,6 @@ const itinerarySlice = createSlice({
         }
       })
       .addCase(generateItinerary.rejected, (state, action) => {
-        // ── STALE REJECTION GUARD ──
-        // RTK stores the original thunk arg in action.meta.arg.
-        // If this rejection's requestId doesn't match the latest,
-        // it's from an older request — discard it silently.
         const requestId = action.meta?.arg?.requestId;
         if (requestId && requestId !== state.requestId) {
           return;

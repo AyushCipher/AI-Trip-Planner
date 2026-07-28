@@ -26,7 +26,7 @@ export default function StopCard({ stop, onRemove, dragHandleProps }) {
       onRemove(stop.id);
     } else {
       setConfirmRemove(true);
-      setTimeout(() => setConfirmRemove(false), 3000); // reset after 3s
+      setTimeout(() => setConfirmRemove(false), 3000);
     }
   };
 

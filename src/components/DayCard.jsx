@@ -18,7 +18,6 @@ import { useDispatch } from 'react-redux';
 import { reorderStops } from '../store/itinerarySlice.js';
 import StopCard from './StopCard.jsx';
 
-// ── Sortable wrapper for each StopCard ──
 function SortableStop({ stop, onRemove }) {
   const {
     attributes,
