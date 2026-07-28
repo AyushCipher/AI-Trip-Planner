@@ -1,122 +1,94 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useCallback } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  generateItinerary,
+  setRequestId,
+} from './store/itinerarySlice.js';
+
+import TripInput from './components/TripInput.jsx';
+import ItineraryView from './components/ItineraryView.jsx';
+import LoadingState from './components/LoadingState.jsx';
+import ErrorState from './components/ErrorState.jsx';
+import EmptyState from './components/EmptyState.jsx';
+
+import './App.css';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const dispatch = useDispatch();
+  const { status, data, errorMessage, lastPrompt } = useSelector(
+    (state) => state.itinerary
+  );
+
+  // Track the input value so example chips can pre-fill it
+  const [inputValue, setInputValue] = useState('');
+
+  // ── Submit handler ──
+  const handleSubmit = useCallback(
+    (prompt) => {
+      // Generate a unique requestId for this submission
+      const requestId = crypto.randomUUID();
+
+      // Set it in Redux BEFORE dispatching the thunk — this is the
+      // stale-response guard: any older in-flight request will see
+      // its requestId doesn't match and its result will be discarded.
+      dispatch(setRequestId(requestId));
+      dispatch(generateItinerary({ prompt, requestId }));
+    },
+    [dispatch]
+  );
+
+  // ── Example chip click handler ──
+  const handleExampleClick = useCallback((text) => {
+    setInputValue(text);
+  }, []);
+
+  // ── Retry handler ──
+  const handleRetry = useCallback(() => {
+    if (lastPrompt) {
+      handleSubmit(lastPrompt);
+    }
+  }, [lastPrompt, handleSubmit]);
+
+  // ── Render the correct results section ──
+  const renderResults = () => {
+    switch (status) {
+      case 'idle':
+        return <EmptyState onExampleClick={handleExampleClick} />;
+      case 'loading':
+        return <LoadingState />;
+      case 'error':
+        return <ErrorState message={errorMessage} onRetry={handleRetry} />;
+      case 'success':
+        return <ItineraryView data={data} />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <header className="app-header">
+        <h1 className="app-header__title">✈ AI Trip Planner</h1>
+        <p className="app-header__subtitle">
+          Describe your dream trip and let AI create the perfect itinerary
+        </p>
+      </header>
 
-      <div className="ticks"></div>
+      <main className="app-main">
+        <section className="app-input-section">
+          <TripInput
+            onSubmit={handleSubmit}
+            isLoading={status === 'loading'}
+            initialValue={inputValue}
+          />
+        </section>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <section className="app-results-section" aria-live="polite">
+          {renderResults()}
+        </section>
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;

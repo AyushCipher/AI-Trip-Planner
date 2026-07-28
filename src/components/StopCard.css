@@ -1,0 +1,160 @@
+.stop-card {
+  display: flex;
+  align-items: center;
+  background-color: var(--color-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  border-left: 4px solid var(--card-border-color);
+  padding: 16px;
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  margin-bottom: 12px;
+}
+
+.stop-card:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.stop-card__drag-handle {
+  cursor: grab;
+  color: var(--color-text-secondary);
+  font-size: 20px;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.stop-card__drag-handle:active {
+  cursor: grabbing;
+}
+
+.stop-card__time {
+  font-weight: bold;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  font-size: 0.9rem;
+  background-color: var(--color-bg);
+  padding: 4px 8px;
+  border-radius: var(--radius-md);
+}
+
+.stop-card__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stop-card__name {
+  margin: 0;
+  font-size: 1.1rem;
+  font-family: var(--font-display);
+  color: var(--color-text);
+}
+
+.stop-card__description {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.stop-card__tips {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  font-style: italic;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stop-card__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.stop-card__category {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--radius-lg);
+  font-size: 0.8rem;
+  font-weight: bold;
+  text-transform: capitalize;
+}
+
+.stop-card__duration,
+.stop-card__cost {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.stop-card__remove-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stop-card__remove-btn:hover {
+  background-color: var(--color-surface-hover);
+  color: var(--color-text);
+}
+
+.stop-card__remove-btn--confirm {
+  background-color: #fee2e2;
+  color: #ef4444;
+  font-size: 0.8rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.stop-card__remove-btn--confirm:hover {
+  background-color: #fca5a5;
+  color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .stop-card {
+    flex-direction: column;
+    align-items: flex-start;
+    position: relative;
+    padding-top: 32px;
+  }
+
+  .stop-card__drag-handle {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+  }
+
+  .stop-card__remove-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+
+  .stop-card__meta {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
