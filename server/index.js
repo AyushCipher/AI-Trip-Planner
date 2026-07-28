@@ -271,11 +271,29 @@ app.use((err, req, res, next) => {
   });
 });
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Serve static assets from Vite build in production
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Fallback all non-API GET requests to index.html for client-side routing
+app.get('*', (req, res) => {
+  if (!req.path.startsWith('/api')) {
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  }
+});
+
 // ──────────────────────────────────────────────
 // Start server
 // ──────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+const serverPort = process.env.PORT || PORT;
+
+app.listen(serverPort, () => {
+  console.log(`Server running on http://localhost:${serverPort}`);
   console.log(
     `Gemini configuration: model=${GEMINI_MODEL}, API key prefix=${
       GEMINI_API_KEY ? `${GEMINI_API_KEY.slice(0, 8)}...` : '[not set]'
